@@ -528,7 +528,16 @@ async fn connect_sftp(
 
     session.known_hosts_check(known_hosts_strategy);
 
-    let session = session.connect(&endpoint).await?;
+    let session = match endpoint
+        .split_once(':')
+        .map(|(host, port)| (host, port.parse()))
+    {
+        Some((host, Ok(port))) => {
+            session.port(port);
+            session.connect(&host).await?
+        }
+        _ => session.connect(&endpoint).await?,
+    };
 
     let sftp = Sftp::from_session(session, SftpOptions::default()).await?;
 
